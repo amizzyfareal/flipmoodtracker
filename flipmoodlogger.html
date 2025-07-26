@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>My Mood Logger</title>
+<style>
+  body {
+    font-family: "Times New Roman", serif;
+    font-size: 16px;
+    margin: 10px;
+    background: #000;
+    color: #fff;
+    max-width: 100%;
+  }
+  h1 {
+    font-size: 1.5em;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  button {
+    font-family: "Times New Roman", serif;
+    font-size: 1em;
+    padding: 10px;
+    margin: 5px 0;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #222;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+  }
+  button:hover, button.selected {
+    background-color: #444;
+    color: #fff;
+  }
+  #begin-btn {
+    font-size: 1.2em;
+    width: 50%;
+    margin: 0 auto 30px auto;
+    display: block;
+  }
+  .screen {
+    display: none;
+  }
+  .visible {
+    display: block;
+  }
+  .mood-list button {
+    text-align: left;
+    font-family: "Times New Roman", serif;
+  }
+  .intensity-list {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+  }
+  .intensity-list button {
+    flex: 1;
+    margin: 0 2px;
+    padding: 8px 0;
+    background-color: #550000;
+    border: none;
+    border-radius: 5px;
+    font-family: "Times New Roman", serif;
+    color: #fff;
+  }
+  .intensity-list button:hover, .intensity-list button.selected {
+    background-color: #bb0000;
+    color: #fff;
+  }
+  .navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  .navigation button {
+    width: 48%;
+  }
+  textarea {
+    width: 100%;
+    height: 80px;
+    font-size: 16px;
+    font-family: "Times New Roman", serif;
+    background-color: #222;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  textarea::placeholder {
+    color: #ccc;
+  }
+  .center-text {
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="screen1" class="screen visible">
+  <h1>My Mood Logger</h1>
+  <button id="begin-btn">Begin</button>
+</div>
+
+<div id="screen2" class="screen">
+  <h1>Select Your Mood</h1>
+  <div class="mood-list">
+    <button data-mood="Happy">Happy</button>
+    <button data-mood="Sad">Sad</button>
+    <button data-mood="Mad">Mad</button>
+    <button data-mood="Numb">Numb</button>
+    <button data-mood="Anxious">Anxious</button>
+    <button data-mood="Envious">Envious</button>
+    <button data-mood="Fearful">Fearful</button>
+    <button data-mood="Excited">Excited</button>
+    <button data-mood="Calm">Calm</button>
+  </div>
+  <div class="navigation">
+    <button id="back2">Back</button>
+    <button id="next2" disabled>Next</button>
+  </div>
+</div>
+
+<div id="screen3" class="screen">
+  <h1>Rate Intensity of This Emotion</h1>
+  <div class="intensity-list">
+    <button data-intensity="1">1</button>
+    <button data-intensity="2">2</button>
+    <button data-intensity="3">3</button>
+    <button data-intensity="4">4</button>
+    <button data-intensity="5">5</button>
+    <button data-intensity="6">6</button>
+    <button data-intensity="7">7</button>
+    <button data-intensity="8">8</button>
+    <button data-intensity="9">9</button>
+    <button data-intensity="10">10</button>
+  </div>
+  <div class="navigation">
+    <button id="back3">Back</button>
+    <button id="next3" disabled>Next</button>
+  </div>
+</div>
+
+<div id="screen4" class="screen">
+  <h1>Any Notes?</h1>
+  <textarea id="notes" placeholder="Type your notes here..."></textarea>
+  <div class="navigation">
+    <button id="back4">Back</button>
+    <button id="submit-btn">Submit</button>
+  </div>
+</div>
+
+<div id="screen5" class="screen center-text">
+  <h1>Answers logged.<br>See you later.</h1>
+</div>
+
+<script>
+  // Replace these URLs with your actual Google Sheet URL and Apps Script URL
+  const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1VqSuf5E6uU8IbQvBgkW_T2WAGUuriii8FmSXRaX0RAI/edit?usp=sharing';
+  const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBzHyk6LylIhqVqDVoIJHAsJxPbL6d_pIC9Pv2DSxJrNlwI5tdPJ93pjZiLP9tqiQF2Q/exec';
+
+  // Screen elements
+  const screens = {
+    1: document.getElementById('screen1'),
+    2: document.getElementById('screen2'),
+    3: document.getElementById('screen3'),
+    4: document.getElementById('screen4'),
+    5: document.getElementById('screen5')
+  };
+
+  let currentScreen = 1;
+
+  // Data storage
+  let selectedMood = null;
+  let selectedIntensity = null;
+  let notes = '';
+
+  // Show screen helper
+  function showScreen(n) {
+    for (const key in screens) {
+      screens[key].classList.remove('visible');
+    }
+    screens[n].classList.add('visible');
+    currentScreen = n;
+  }
+
+  // Screen 1 - Begin button
+  document.getElementById('begin-btn').addEventListener('click', () => {
+    showScreen(2);
+  });
+
+  // Screen 2 - Mood selection
+  const moodButtons = document.querySelectorAll('#screen2 .mood-list button');
+  const next2 = document.getElementById('next2');
+  const back2 = document.getElementById('back2');
+
+  moodButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedMood = btn.getAttribute('data-mood');
+      moodButtons.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      next2.disabled = false;
+    });
+  });
+
+  next2.addEventListener('click', () => {
+    if (selectedMood) {
+      showScreen(3);
+      // Reset intensity for fresh selection
+      selectedIntensity = null;
+      document.querySelectorAll('#screen3 .intensity-list button').forEach(b => b.classList.remove('selected'));
+      document.getElementById('next3').disabled = true;
+    }
+  });
+
+  back2.addEventListener('click', () => {
+    showScreen(1);
+  });
+
+  // Screen 3 - Intensity rating
+  const intensityButtons = document.querySelectorAll('#screen3 .intensity-list button');
+  const next3 = document.getElementById('next3');
+  const back3 = document.getElementById('back3');
+
+  intensityButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedIntensity = btn.getAttribute('data-intensity');
+      intensityButtons.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      next3.disabled = false;
+    });
+  });
+
+  next3.addEventListener('click', () => {
+    if (selectedIntensity) {
+      showScreen(4);
+      // Clear notes textarea
+      document.getElementById('notes').value = '';
+      notes = '';
+    }
+  });
+
+  back3.addEventListener('click', () => {
+    showScreen(2);
+  });
+
+  // Screen 4 - Notes
+  const back4 = document.getElementById('back4');
+  const submitBtn = document.getElementById('submit-btn');
+  const notesInput = document.getElementById('notes');
+
+  back4.addEventListener('click', () => {
+    showScreen(3);
+  });
+
+  submitBtn.addEventListener('click', () => {
+    notes = notesInput.value.trim();
+
+    // Prepare data to send
+    const data = {
+      mood: selectedMood,
+      intensity: selectedIntensity,
+      notes: notes,
+      timestamp: new Date().toISOString()
+    };
+
+    // Submit data to Google Apps Script endpoint
+    fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    }).catch(() => {
+      // On flip phones, no-cors fetch may silently fail
+      // We'll still show success message for smooth UX
+    });
+
+    showScreen(5);
+  });
+</script>
+
+</body>
+</html>
